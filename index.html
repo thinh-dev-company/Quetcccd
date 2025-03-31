@@ -6,19 +6,46 @@
     <title>Quét QR Code CCCD</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { text-align: center; font-family: Arial, sans-serif; }
-        button { padding: 10px; margin: 10px; font-size: 16px; }
-        video { width: 100%; max-width: 400px; border: 2px solid #0073e6; display: none; }
-        select { margin: 10px; }
+        header { background: #0073e6; color: white; text-align: center; padding: 15px; }
+        nav { background: #005bb5; padding: 10px; display: flex; justify-content: center; gap: 20px; }
+        nav a { color: white; text-decoration: none; font-weight: bold; padding: 10px; }
+        nav a:hover { background: #003f8a; border-radius: 5px; }
+        .banner { width: 100%; height: 250px; background: url('https://scontent.iocvnpt.com/resources/portal/Images/CTO/superadminportal.cto/trangchu/slider3/z6231003591303_b47b7a56edd05e64d6b056435d6f72e7_110314748.jpg') no-repeat center; background-size: cover; }
+        main { text-align: center; padding: 20px; }
+        button { padding: 10px 20px; font-size: 16px; background: #0073e6; color: white; border: none; cursor: pointer; border-radius: 5px; margin-bottom: 10px; }
+        button:hover { background: #005bb5; }
+        video, img { width: 100%; max-width: 400px; display: none; margin-top: 10px; border: 2px solid #0073e6; }
+        footer { background: #333; color: white; text-align: center; padding: 15px; margin-top: 20px; }
     </style>
 </head>
 <body>
-    <h1>Quét QR Code CCCD</h1>
-    <button id="startScan">Bắt đầu quét</button>
-    <button id="stopScan" style="display:none;">Dừng quét</button>
-    <select id="cameraSelect" style="display:none;"></select>
-    <video id="video" autoplay></video>
-    <p>Kết quả: <span id="result"></span></p>
+
+    <header>
+        <h1>Hệ thống Quét QR Code CCCD</h1>
+    </header>
+
+    <nav>
+        <a href="#">Trang chủ</a>
+        <a href="#">Hướng dẫn</a>
+        <a href="#">Liên hệ</a>
+    </nav>
+
+    <div class="banner"></div>
+
+    <main>
+        <h2>Quét QR Code CCCD</h2>
+        <button id="startScan">Bắt đầu quét</button>
+        <button id="stopScan" style="display:none;">Dừng quét</button>
+        <button id="uploadImage">Tải ảnh lên</button>
+        <input type="file" id="fileInput" accept="image/*" style="display:none;">
+        <video id="video"></video>
+        <img id="preview" alt="Ảnh tải lên">
+        <p>Kết quả: <span id="result"></span></p>
+    </main>
+
+    <footer>
+        <p>© 2025 - Hệ thống Quét QR CCCD</p>
+    </footer>
 
     <script type="module">
         import { BrowserMultiFormatReader } from "https://cdn.jsdelivr.net/npm/@zxing/browser@latest/+esm";
@@ -28,57 +55,33 @@
         const resultElement = document.getElementById("result");
         const startButton = document.getElementById("startScan");
         const stopButton = document.getElementById("stopScan");
-        const cameraSelect = document.getElementById("cameraSelect");
+        const uploadButton = document.getElementById("uploadImage");
+        const fileInput = document.getElementById("fileInput");
+        const previewImage = document.getElementById("preview");
         let stream = null;
-        let track = null;
-
-        async function getCameras() {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const videoDevices = devices.filter(device => device.kind === "videoinput");
-            cameraSelect.innerHTML = "";
-            videoDevices.forEach((device, index) => {
-                const option = document.createElement("option");
-                option.value = device.deviceId;
-                option.textContent = device.label || `Camera ${index + 1}`;
-                cameraSelect.appendChild(option);
-            });
-            cameraSelect.style.display = videoDevices.length > 1 ? "block" : "none";
-        }
-
+        
         startButton.addEventListener("click", async () => {
             try {
-                await getCameras();
-                const selectedCamera = cameraSelect.value || undefined;
-                const constraints = {
-                    video: {
-                        deviceId: selectedCamera ? { exact: selectedCamera } : undefined,
-                        facingMode: "environment",
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 }
-                    }
-                };
-                
-                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
                 videoElement.srcObject = stream;
                 videoElement.style.display = "block";
+                previewImage.style.display = "none";
                 startButton.style.display = "none";
                 stopButton.style.display = "inline-block";
                 
-                track = stream.getVideoTracks()[0];
                 await codeReader.decodeFromVideoDevice(undefined, "video", (result, err) => {
                     if (result) {
                         resultElement.textContent = result.text;
                         stopScanning();
                     }
-                }, { tryHarder: true });
+                });
             } catch (error) {
-                console.error("Lỗi khi quét:", error);
                 alert("Không thể mở camera! Hãy kiểm tra quyền truy cập.");
             }
         });
-
+        
         stopButton.addEventListener("click", stopScanning);
-
+        
         function stopScanning() {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
@@ -88,11 +91,33 @@
             }
             codeReader.reset();
         }
-
-        cameraSelect.addEventListener("change", () => {
-            stopScanning();
-            startButton.click();
+        
+        uploadButton.addEventListener("click", () => fileInput.click());
+        
+        fileInput.addEventListener("change", async (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    previewImage.src = e.target.result;
+                    previewImage.style.display = "block";
+                    videoElement.style.display = "none";
+                    
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = async () => {
+                        try {
+                            const result = await codeReader.decodeFromImageElement(img);
+                            resultElement.textContent = result.text;
+                        } catch (err) {
+                            resultElement.textContent = "Không tìm thấy mã QR trong ảnh.";
+                        }
+                    };
+                };
+                reader.readAsDataURL(file);
+            }
         });
     </script>
+
 </body>
 </html>
