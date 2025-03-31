@@ -5,14 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quét QR Code CCCD</title>
     <style>
-        /* ===== RESET CSS ===== */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        /* ===== HEADER ===== */
         header {
             background-color: #0073e6;
             color: white;
@@ -24,7 +22,6 @@
             font-size: 24px;
         }
 
-        /* ===== MENU NGANG ===== */
         nav {
             background-color: #005bb5;
             padding: 10px 0;
@@ -46,7 +43,6 @@
             border-radius: 5px;
         }
 
-        /* ===== BANNER ===== */
         .banner {
             width: 100%;
             height: 250px;
@@ -54,7 +50,6 @@
             background-size: cover;
         }
 
-        /* ===== NỘI DUNG CHÍNH ===== */
         main {
             text-align: center;
             padding: 20px;
@@ -80,9 +75,10 @@
             max-width: 400px;
             display: none;
             margin-top: 10px;
+            border: 2px solid #0073e6;
+            border-radius: 5px;
         }
 
-        /* ===== FOOTER ===== */
         footer {
             background-color: #333;
             color: white;
@@ -94,41 +90,38 @@
 </head>
 <body>
 
-    <!-- ===== HEADER ===== -->
     <header>
         <h1>Hệ thống Quét QR Code CCCD</h1>
     </header>
 
-    <!-- ===== MENU NGANG (NẰM NGOÀI HEADER) ===== -->
     <nav>
         <a href="#">Trang chủ</a>
         <a href="#">Hướng dẫn</a>
         <a href="#">Liên hệ</a>
     </nav>
 
-    <!-- ===== BANNER ===== -->
     <div class="banner"></div>
 
-    <!-- ===== NỘI DUNG CHÍNH ===== -->
     <main>
         <h2>Quét QR Code CCCD</h2>
         <button id="startScan">Bắt đầu quét</button>
-        <video id="video"></video>
+        <video id="video" autoplay></video>
         <p>Kết quả: <span id="result"></span></p>
     </main>
 
-    <!-- ===== FOOTER ===== -->
     <footer>
         <p>© 2025 - Hệ thống Quét QR CCCD</p>
     </footer>
 
-    <!-- ===== SCRIPT QUÉT QR ===== -->
     <script type="module">
         import { BrowserMultiFormatReader } from "https://cdn.jsdelivr.net/npm/@zxing/browser@latest/+esm";
 
         const codeReader = new BrowserMultiFormatReader();
         const videoElement = document.getElementById("video");
         const resultElement = document.getElementById("result");
+
+        let stream = null;
+        let track = null;
 
         document.getElementById("startScan").addEventListener("click", async () => {
             try {
@@ -141,16 +134,35 @@
                     }
                 };
 
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
                 videoElement.srcObject = stream;
                 videoElement.style.display = "block";
+
+                track = stream.getVideoTracks()[0];
+                const capabilities = track.getCapabilities();
+
+                videoElement.addEventListener("click", (event) => {
+                    if (!track) return;
+
+                    // Nếu thiết bị hỗ trợ focus, đặt chế độ manual
+                    if ("focusMode" in capabilities) {
+                        track.applyConstraints({
+                            advanced: [{ focusMode: "manual" }]
+                        }).catch(console.error);
+                    }
+
+                    // Nếu thiết bị hỗ trợ zoom, thử zoom vào trung tâm
+                    if ("zoom" in capabilities) {
+                        track.applyConstraints({
+                            advanced: [{ zoom: capabilities.zoom.max / 2 }]
+                        }).catch(console.error);
+                    }
+                });
 
                 await codeReader.decodeFromVideoDevice(undefined, "video", (result, err) => {
                     if (result) {
                         resultElement.textContent = result.text;
-                        codeReader.reset();
-                        videoElement.style.display = "none";
-                        stream.getTracks().forEach(track => track.stop());
+                        stopScanning();
                     }
                 }, { tryHarder: true });
 
@@ -159,6 +171,14 @@
                 alert("Lỗi khi quét QR Code!");
             }
         });
+
+        function stopScanning() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            videoElement.style.display = "none";
+            codeReader.reset();
+        }
     </script>
 
 </body>
