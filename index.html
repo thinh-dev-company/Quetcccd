@@ -3,97 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quét QR Code CCCD</title>
+    <title>Quét & Chụp QR Code CCCD</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; text-align: center; }
-        video { width: 100%; max-width: 400px; border: 2px solid #0073e6; cursor: crosshair; }
-        button { padding: 10px 15px; margin: 10px; font-size: 16px; }
-        select { padding: 5px; margin: 10px; }
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        video, canvas { width: 100%; max-width: 400px; border: 2px solid #0073e6; }
+        button, select { margin-top: 10px; padding: 10px; font-size: 16px; }
     </style>
 </head>
 <body>
-    <h2>Quét QR Code CCCD</h2>
+    <h1>Quét & Chụp QR Code CCCD</h1>
     <select id="cameraSelect"></select>
     <button id="startScan">Bắt đầu quét</button>
     <button id="stopScan" style="display:none;">Dừng quét</button>
-    <video id="video"></video>
+    <button id="capture" style="display:none;">Chụp ảnh</button>
+    <video id="video" autoplay></video>
+    <canvas id="canvas" style="display:none;"></canvas>
     <p>Kết quả: <span id="result"></span></p>
-
+    
     <script type="module">
         import { BrowserMultiFormatReader } from "https://cdn.jsdelivr.net/npm/@zxing/browser@latest/+esm";
 
         const codeReader = new BrowserMultiFormatReader();
-        const videoElement = document.getElementById("video");
-        const resultElement = document.getElementById("result");
+        const video = document.getElementById("video");
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        const resultText = document.getElementById("result");
         const startButton = document.getElementById("startScan");
         const stopButton = document.getElementById("stopScan");
+        const captureButton = document.getElementById("capture");
         const cameraSelect = document.getElementById("cameraSelect");
-        let stream = null, track = null, selectedDeviceId = null;
+        let stream = null;
+        let track = null;
 
         async function listCameras() {
             const devices = await navigator.mediaDevices.enumerateDevices();
-            cameraSelect.innerHTML = "";
-            devices.filter(d => d.kind === "videoinput").forEach((device, index) => {
-                const option = document.createElement("option");
-                option.value = device.deviceId;
-                option.textContent = device.label || `Camera ${index + 1}`;
-                cameraSelect.appendChild(option);
-            });
+            const videoDevices = devices.filter(device => device.kind === 'videoinput');
+            cameraSelect.innerHTML = videoDevices.map((device, index) => 
+                `<option value="${device.deviceId}">${device.label || `Camera ${index + 1}`}</option>`
+            ).join('');
         }
 
         startButton.addEventListener("click", async () => {
             try {
-                selectedDeviceId = cameraSelect.value;
                 const constraints = {
-                    video: {
-                        deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
-                        width: { ideal: 1920 }, height: { ideal: 1080 }
-                    }
+                    video: { deviceId: cameraSelect.value ? { exact: cameraSelect.value } : undefined }
                 };
                 
                 stream = await navigator.mediaDevices.getUserMedia(constraints);
-                videoElement.srcObject = stream;
-                videoElement.style.display = "block";
+                video.srcObject = stream;
+                video.style.display = "block";
                 startButton.style.display = "none";
                 stopButton.style.display = "inline-block";
+                captureButton.style.display = "inline-block";
+
                 track = stream.getVideoTracks()[0];
+
+                if ("focusMode" in track.getCapabilities()) {
+                    track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(console.error);
+                }
 
                 await codeReader.decodeFromVideoDevice(undefined, "video", (result, err) => {
                     if (result) {
-                        resultElement.textContent = result.text;
+                        resultText.textContent = result.text;
                         stopScanning();
                     }
-                });
+                }, { tryHarder: true });
             } catch (error) {
+                console.error("Lỗi camera:", error);
                 alert("Không thể mở camera! Kiểm tra quyền truy cập.");
-                console.error(error);
             }
         });
 
         stopButton.addEventListener("click", stopScanning);
+        captureButton.addEventListener("click", captureImage);
+
         function stopScanning() {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
-                videoElement.style.display = "none";
+                video.style.display = "none";
                 startButton.style.display = "inline-block";
                 stopButton.style.display = "none";
+                captureButton.style.display = "none";
             }
             codeReader.reset();
         }
 
-        videoElement.addEventListener("click", async (event) => {
-            if (!track) return;
-            const capabilities = track.getCapabilities();
-            if (capabilities.focusMode && capabilities.focusPointX !== undefined) {
-                const rect = videoElement.getBoundingClientRect();
+        function captureImage() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+            const imageDataUrl = canvas.toDataURL("image/png");
+            const link = document.createElement("a");
+            link.href = imageDataUrl;
+            link.download = "captured.png";
+            link.click();
+        }
+
+        video.addEventListener("click", (event) => {
+            if (track && "focusMode" in track.getCapabilities()) {
+                const rect = video.getBoundingClientRect();
                 const x = (event.clientX - rect.left) / rect.width;
                 const y = (event.clientY - rect.top) / rect.height;
-                try {
-                    await track.applyConstraints({ advanced: [{ focusMode: "manual", focusPointX: x, focusPointY: y }] });
-                } catch (error) {
-                    console.warn("Không thể lấy nét tại vị trí này.", error);
-                }
+                
+                track.applyConstraints({
+                    advanced: [{ focusMode: "manual", focusPointX: x, focusPointY: y }]
+                }).catch(console.error);
             }
         });
 
