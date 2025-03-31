@@ -7,38 +7,30 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         header { background: #0073e6; color: white; text-align: center; padding: 15px; }
-        nav { background: #005bb5; padding: 10px; display: flex; justify-content: center; gap: 20px; }
-        nav a { color: white; text-decoration: none; font-weight: bold; padding: 10px; }
-        nav a:hover { background: #003f8a; border-radius: 5px; }
-        .banner { width: 100%; height: 250px; background: url('https://scontent.iocvnpt.com/resources/portal/Images/CTO/superadminportal.cto/trangchu/slider3/z6231003591303_b47b7a56edd05e64d6b056435d6f72e7_110314748.jpg') no-repeat center; background-size: cover; }
         main { text-align: center; padding: 20px; }
-        button { padding: 10px 20px; font-size: 16px; background: #0073e6; color: white; border: none; cursor: pointer; border-radius: 5px; margin-bottom: 10px; }
+        button, input { padding: 10px; font-size: 16px; border-radius: 5px; margin: 5px; }
+        button { background: #0073e6; color: white; border: none; cursor: pointer; }
         button:hover { background: #005bb5; }
         video { width: 100%; max-width: 400px; display: none; margin-top: 10px; border: 2px solid #0073e6; }
-        #focusHint { font-size: 14px; color: gray; margin-top: 5px; }
+        label { display: block; margin-top: 10px; font-size: 14px; color: gray; }
         footer { background: #333; color: white; text-align: center; padding: 15px; margin-top: 20px; }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>Hệ thống Quét QR Code CCCD</h1>
+        <h1>Quét QR Code CCCD</h1>
     </header>
-
-    <nav>
-        <a href="#">Trang chủ</a>
-        <a href="#">Hướng dẫn</a>
-        <a href="#">Liên hệ</a>
-    </nav>
-
-    <div class="banner"></div>
 
     <main>
         <h2>Quét QR Code CCCD</h2>
         <button id="startScan">Bắt đầu quét</button>
         <button id="stopScan" style="display:none;">Dừng quét</button>
         <video id="video"></video>
-        <p id="focusHint">Nhấn vào video để lấy nét nếu bị mờ.</p>
+
+        <label for="zoomControl" id="zoomLabel" style="display: none;">Zoom:</label>
+        <input type="range" id="zoomControl" min="1" max="10" step="0.1" value="1" style="display: none; width: 80%;">
+        
         <p>Kết quả: <span id="result"></span></p>
     </main>
 
@@ -54,8 +46,11 @@
         const resultElement = document.getElementById("result");
         const startButton = document.getElementById("startScan");
         const stopButton = document.getElementById("stopScan");
+        const zoomControl = document.getElementById("zoomControl");
+        const zoomLabel = document.getElementById("zoomLabel");
         let stream = null;
         let track = null;
+        let maxZoom = 1;
 
         startButton.addEventListener("click", async () => {
             try {
@@ -74,10 +69,17 @@
                 stopButton.style.display = "inline-block";
 
                 track = stream.getVideoTracks()[0];
+                const capabilities = track.getCapabilities();
 
-                // Nếu camera hỗ trợ focus, áp dụng manual focus
-                if ("focusMode" in track.getCapabilities()) {
-                    track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(console.error);
+                // Nếu camera hỗ trợ zoom, kích hoạt slider
+                if (capabilities.zoom) {
+                    maxZoom = capabilities.zoom.max || 10;
+                    zoomControl.min = capabilities.zoom.min || 1;
+                    zoomControl.max = maxZoom;
+                    zoomControl.step = 0.1;
+                    zoomControl.value = capabilities.zoom.min || 1;
+                    zoomControl.style.display = "block";
+                    zoomLabel.style.display = "block";
                 }
 
                 await codeReader.decodeFromVideoDevice(undefined, "video", (result, err) => {
@@ -101,14 +103,16 @@
                 videoElement.style.display = "none";
                 startButton.style.display = "inline-block";
                 stopButton.style.display = "none";
+                zoomControl.style.display = "none";
+                zoomLabel.style.display = "none";
             }
             codeReader.reset();
         }
 
-        // Người dùng chạm vào video để thử lấy nét lại
-        videoElement.addEventListener("click", () => {
-            if (track && "focusMode" in track.getCapabilities()) {
-                track.applyConstraints({ advanced: [{ focusMode: "manual" }] }).catch(console.error);
+        // Sự kiện thay đổi mức zoom
+        zoomControl.addEventListener("input", () => {
+            if (track) {
+                track.applyConstraints({ advanced: [{ zoom: zoomControl.value }] }).catch(console.error);
             }
         });
 
