@@ -14,11 +14,12 @@
         main { text-align: center; padding: 20px; }
         button { padding: 10px 20px; font-size: 16px; background: #0073e6; color: white; border: none; cursor: pointer; border-radius: 5px; margin-bottom: 10px; }
         button:hover { background: #005bb5; }
-        video, canvas, img { width: 100%; max-width: 400px; display: none; margin-top: 10px; border: 2px solid #0073e6; }
+        video, img, canvas { width: 100%; max-width: 400px; display: none; margin-top: 10px; border: 2px solid #0073e6; }
         footer { background: #333; color: white; text-align: center; padding: 15px; margin-top: 20px; }
     </style>
 </head>
 <body>
+
     <header>
         <h1>Hệ thống Quét QR Code CCCD</h1>
     </header>
@@ -61,7 +62,7 @@
         const canvas = document.getElementById("canvas");
         const ctx = canvas.getContext("2d");
         let stream = null;
-
+        
         startButton.addEventListener("click", async () => {
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
@@ -76,14 +77,14 @@
                         resultElement.textContent = result.text;
                         stopScanning();
                     }
-                });
+                }, { tryHarder: true });
             } catch (error) {
                 alert("Không thể mở camera! Hãy kiểm tra quyền truy cập.");
             }
         });
-
+        
         stopButton.addEventListener("click", stopScanning);
-
+        
         function stopScanning() {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
@@ -93,24 +94,23 @@
             }
             codeReader.reset();
         }
-
+        
         uploadButton.addEventListener("click", () => fileInput.click());
-
+        
         fileInput.addEventListener("change", async (event) => {
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
                 reader.onload = async (e) => {
+                    previewImage.src = e.target.result;
+                    previewImage.style.display = "block";
+                    videoElement.style.display = "none";
+                    
                     const img = new Image();
                     img.src = e.target.result;
                     img.onload = async () => {
-                        canvas.width = img.width / 2;
-                        canvas.height = img.height / 2;
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        
                         try {
-                            const result = await codeReader.decodeFromCanvas(canvas);
-                            resultElement.textContent = result.text;
+                            processImage(img);
                         } catch (err) {
                             resultElement.textContent = "Không tìm thấy mã QR trong ảnh.";
                         }
@@ -119,6 +119,34 @@
                 reader.readAsDataURL(file);
             }
         });
+
+        function processImage(img) {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0, img.width, img.height);
+            
+            // Chuyển ảnh sang grayscale
+            let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            let data = imageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                let brightness = 0.3 * data[i] + 0.59 * data[i + 1] + 0.11 * data[i + 2];
+                data[i] = data[i + 1] = data[i + 2] = brightness > 128 ? 255 : 0;
+            }
+            ctx.putImageData(imageData, 0, 0);
+
+            // Quét mã QR từ ảnh đã xử lý
+            const processedImg = new Image();
+            processedImg.src = canvas.toDataURL();
+            processedImg.onload = async () => {
+                try {
+                    const result = await codeReader.decodeFromImageElement(processedImg);
+                    resultElement.textContent = result.text;
+                } catch (err) {
+                    resultElement.textContent = "Không tìm thấy mã QR sau khi xử lý ảnh.";
+                }
+            };
+        }
     </script>
+
 </body>
 </html>
