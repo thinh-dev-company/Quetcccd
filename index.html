@@ -7,116 +7,119 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         header { background: #0073e6; color: white; text-align: center; padding: 15px; }
+        nav { background: #005bb5; padding: 10px; display: flex; justify-content: center; gap: 20px; }
+        nav a { color: white; text-decoration: none; font-weight: bold; padding: 10px; }
+        nav a:hover { background: #003f8a; border-radius: 5px; }
+        .banner { width: 100%; height: 250px; background: url('https://scontent.iocvnpt.com/resources/portal/Images/CTO/superadminportal.cto/trangchu/slider3/z6231003591303_b47b7a56edd05e64d6b056435d6f72e7_110314748.jpg') no-repeat center; background-size: cover; }
         main { text-align: center; padding: 20px; }
-        button, input { padding: 10px; font-size: 16px; border-radius: 5px; margin: 5px; }
-        button { background: #0073e6; color: white; border: none; cursor: pointer; }
+        button { padding: 10px 20px; font-size: 16px; background: #0073e6; color: white; border: none; cursor: pointer; border-radius: 5px; margin-bottom: 10px; }
         button:hover { background: #005bb5; }
         video { width: 100%; max-width: 400px; display: none; margin-top: 10px; border: 2px solid #0073e6; }
-        label { display: block; margin-top: 10px; font-size: 14px; color: gray; }
+        #focusHint { font-size: 14px; color: gray; margin-top: 5px; }
         footer { background: #333; color: white; text-align: center; padding: 15px; margin-top: 20px; }
     </style>
 </head>
 <body>
-
     <header>
-        <h1>Quét QR Code CCCD</h1>
+        <h1>Hệ thống Quét QR Code CCCD</h1>
     </header>
-
+    <nav>
+        <a href="#">Trang chủ</a>
+        <a href="#">Hướng dẫn</a>
+        <a href="#">Liên hệ</a>
+    </nav>
+    <div class="banner"></div>
     <main>
         <h2>Quét QR Code CCCD</h2>
+        <label for="cameraSelect">Chọn Camera:</label>
+        <select id="cameraSelect"></select>
         <button id="startScan">Bắt đầu quét</button>
         <button id="stopScan" style="display:none;">Dừng quét</button>
         <video id="video"></video>
-
-        <label for="zoomControl" id="zoomLabel" style="display: none;">Zoom:</label>
-        <input type="range" id="zoomControl" min="1" max="10" step="0.1" value="1" style="display: none; width: 80%;">
-        
+        <p id="focusHint">Nhấn vào video để lấy nét nếu bị mờ.</p>
         <p>Kết quả: <span id="result"></span></p>
     </main>
-
     <footer>
         <p>© 2025 - Hệ thống Quét QR CCCD</p>
     </footer>
-
     <script type="module">
         import { BrowserMultiFormatReader } from "https://cdn.jsdelivr.net/npm/@zxing/browser@latest/+esm";
-
+        
         const codeReader = new BrowserMultiFormatReader();
         const videoElement = document.getElementById("video");
         const resultElement = document.getElementById("result");
         const startButton = document.getElementById("startScan");
         const stopButton = document.getElementById("stopScan");
-        const zoomControl = document.getElementById("zoomControl");
-        const zoomLabel = document.getElementById("zoomLabel");
+        const cameraSelect = document.getElementById("cameraSelect");
         let stream = null;
         let track = null;
-        let maxZoom = 1;
-
+        
+        async function getCameras() {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(device => device.kind === "videoinput");
+            
+            cameraSelect.innerHTML = "";
+            videoDevices.forEach((device, index) => {
+                const option = document.createElement("option");
+                option.value = device.deviceId;
+                option.textContent = device.label || `Camera ${index + 1}`;
+                cameraSelect.appendChild(option);
+            });
+        }
+        
         startButton.addEventListener("click", async () => {
             try {
+                const deviceId = cameraSelect.value;
                 const constraints = {
                     video: {
-                        facingMode: "environment",
+                        deviceId: deviceId ? { exact: deviceId } : undefined,
                         width: { ideal: 1920 },
                         height: { ideal: 1080 }
                     }
                 };
-
+                
                 stream = await navigator.mediaDevices.getUserMedia(constraints);
                 videoElement.srcObject = stream;
                 videoElement.style.display = "block";
                 startButton.style.display = "none";
                 stopButton.style.display = "inline-block";
-
+                
                 track = stream.getVideoTracks()[0];
-                const capabilities = track.getCapabilities();
-
-                // Nếu camera hỗ trợ zoom, kích hoạt slider
-                if (capabilities.zoom) {
-                    maxZoom = capabilities.zoom.max || 10;
-                    zoomControl.min = capabilities.zoom.min || 1;
-                    zoomControl.max = maxZoom;
-                    zoomControl.step = 0.1;
-                    zoomControl.value = capabilities.zoom.min || 1;
-                    zoomControl.style.display = "block";
-                    zoomLabel.style.display = "block";
+                if ("focusMode" in track.getCapabilities()) {
+                    track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(console.error);
                 }
-
+                
                 await codeReader.decodeFromVideoDevice(undefined, "video", (result, err) => {
                     if (result) {
                         resultElement.textContent = result.text;
                         stopScanning();
                     }
                 }, { tryHarder: true });
-
             } catch (error) {
                 console.error("Lỗi khi quét:", error);
                 alert("Không thể mở camera! Hãy kiểm tra quyền truy cập.");
             }
         });
-
+        
         stopButton.addEventListener("click", stopScanning);
-
+        
         function stopScanning() {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
                 videoElement.style.display = "none";
                 startButton.style.display = "inline-block";
                 stopButton.style.display = "none";
-                zoomControl.style.display = "none";
-                zoomLabel.style.display = "none";
             }
             codeReader.reset();
         }
-
-        // Sự kiện thay đổi mức zoom
-        zoomControl.addEventListener("input", () => {
-            if (track) {
-                track.applyConstraints({ advanced: [{ zoom: zoomControl.value }] }).catch(console.error);
+        
+        videoElement.addEventListener("click", () => {
+            if (track && "focusMode" in track.getCapabilities()) {
+                track.applyConstraints({ advanced: [{ focusMode: "manual" }] }).catch(console.error);
             }
         });
-
+        
+        getCameras();
     </script>
-
 </body>
 </html>
