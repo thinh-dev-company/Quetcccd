@@ -71,7 +71,7 @@
         <button id="startScan">Bắt đầu quét</button>
         <button id="stopScan" style="display:none;">Dừng quét</button>
         <button id="uploadImage">Tải ảnh lên</button>
-        <button id="manualInput" >Gán thủ công</button>
+        <!-- <button id="manualInput" >Gán thủ công</button> -->
         <input type="file" id="fileInput" accept="image/*" style="display:none;">
         <video id="video"></video>
         <canvas id="canvas"></canvas>
@@ -142,9 +142,9 @@
 
     </main>
 
-    <footer>
+    <!-- <footer>
         <p>© 2025 - Hệ thống Quét QR CCCD</p>
-    </footer>
+    </footer> -->
 <script>
     function toggleOtherOpinion(questionId, show) {
         const textareaContainer = document.getElementById(`${questionId}_otherOpinion`);
@@ -169,9 +169,45 @@
 </script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.0.2/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 
 <script type="module">
     import { BrowserMultiFormatReader } from "https://cdn.jsdelivr.net/npm/@zxing/browser@latest/+esm";
+
+    var users = [
+        {
+            "cccd": "444",
+            "ten": "Võ Văn Nhã",
+            "diaChi": "TP.Cần Thơ",
+            "ngaySinh": "19/05/1991"
+        },
+        {
+            "cccd": "3333",
+            "ten": "Trần Thành Bá",
+            "diaChi": "456 Đường XYZ, TP.Cần Thơ",
+            "ngaySinh": "16/04/1979"
+        },
+        {
+            "cccd": "2222",
+            "ten": "Phạm Thị Cẩm Nhung",
+            "diaChi": "456 Đường XYZ, TP.Cần Thơ",
+            "ngaySinh": "03/08/1996"
+        }, 
+        {
+            "cccd": "092201007383",
+            "ten": "Phan Phú Thịnh",
+            "diaChi": "dường 30/4",
+            "ngaySinh": "23/04/2001"
+        },
+        {
+            "cccd": "092200001647",
+            "ten": "Nguyễn Quốc Kiệt",
+            "diaChi": "456 Đường XYZ, TP.Cần Thơ",
+            "ngaySinh": "15/5/2000"
+        },
+
+    ];
 
     const codeReader = new BrowserMultiFormatReader();
     const videoElement = document.getElementById("video");
@@ -179,7 +215,7 @@
     const startButton = document.getElementById("startScan");
     const stopButton = document.getElementById("stopScan");
     const uploadButton = document.getElementById("uploadImage");
-    const manualInputButton = document.getElementById("manualInput");
+    // const manualInputButton = document.getElementById("manualInput");
     const fileInput = document.getElementById("fileInput");
     const previewImage = document.getElementById("preview");
     const canvas = document.getElementById("canvas");
@@ -208,22 +244,49 @@
                     part1 = qrData[0]; // phần đầu tiên
                     part3 = qrData[2]; // phần cuối cùng
 
-                    // Lưu vào sessionStorage
-                    sessionStorage.setItem('part1', part1);
-                    sessionStorage.setItem('part3', part3);
 
-                    
-                    greetingElement.textContent = `Xin chào ${part3}, Số CCCD của bạn là ${part1}`;
-                    formContainer.style.display = "block";
-                    showForm();
+                    // Kiểm tra part1 có tồn tại trong danh sách không
+                    const user = users.find(u => u.cccd === part1);
+
+                    if (user) {
+                        // Nếu CCCD hợp lệ, lưu vào sessionStorage
+                        sessionStorage.setItem('part1', part1);
+                        sessionStorage.setItem('part3', part3);
+                        if(part1 != null){
+                            loadSavedAnswers(part1);
+                        }
+
+                        document.getElementById("greeting").innerHTML = `
+                            <strong>Xin chào ${user.ten}!</strong><br>
+                            <strong>Số CCCD:</strong> ${user.cccd}<br>
+                            <strong>Địa chỉ:</strong> ${user.diaChi}<br>
+                            <strong>Ngày sinh:</strong> ${user.ngaySinh}
+                            `;
+                        formContainer.style.display = "block";
+                        showForm();
+                        
+                        // Gọi hàm load dữ liệu nếu có
+                        loadSavedAnswers(part1);
+                    } else {
+                        // Hiển thị thông báo nếu CCCD không hợp lệ
+                        Swal.fire({
+                            icon: 'error', // Hoặc 'warning', 'info'
+                            title: 'Không hợp lệ!',
+                            text: 'Hiện tại đợt khảo sát đã kết thúc hoặc cử tri không có trong danh sách lấy ý kiến!',
+                            confirmButtonText: 'OK'
+                        });
+                    }
                 }
-                if(part1 != null){
-            loadSavedAnswers(part1);
-        }
+               
             });
         } catch (err) {
             console.error(err);
-            alert("Lỗi khi truy cập camera.");
+            Swal.fire({
+                            icon: 'error', // Hoặc 'warning', 'info'
+                            title: 'Không hợp lệ!',
+                            text: 'Lỗi khi truy cập camera.!',
+                            confirmButtonText: 'OK'
+                        });
         }
     });
 
@@ -235,18 +298,34 @@
         fileInput.click();
     });
 
-    fileInput.addEventListener("change", (event) => {
+// Lắng nghe sự kiện thay đổi file
+fileInput.addEventListener("change", (event) => {
     const fileInput = document.getElementById("fileInput");
     if (fileInput.files.length === 0) {
-        alert("Vui lòng chọn một tệp ảnh để quét!");
+        Swal.fire({
+            icon: 'warning',
+            title: 'Chưa chọn tệp!',
+            text: 'Vui lòng chọn một tệp ảnh để quét.',
+            confirmButtonText: 'OK'
+        });
         return;
     }
 
     const file = fileInput.files[0];
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    
-    reader.onload = function() {
+
+    // Hiển thị hiệu ứng loading khi bắt đầu quét
+    Swal.fire({
+        title: 'Đang quét ảnh...',
+        text: 'Vui lòng chờ trong giây lát!',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    reader.onload = function () {
         Tesseract.recognize(
             reader.result,
             'vie', // Ngôn ngữ tiếng Việt
@@ -260,50 +339,85 @@
             function extractCitizenId(text) {
                 const idRegex = /\b\d{12}\b/; // Tìm kiếm chuỗi 12 chữ số
                 const match = text.match(idRegex);
-                return match ? match[0] : "Không tìm thấy số CCCD";
+                return match ? match[0] : null;
             }
 
-            // Trích xuất thông tin
+            // Trích xuất số CCCD
             const citizenId = extractCitizenId(text);
 
-            // Hiển thị kết quả
-            console.log("Số CCCD:", citizenId);
+            // Đóng hiệu ứng loading
+            Swal.close();
 
-            // Hiển thị thông tin đã trích xuất
-            document.getElementById("result").innerHTML += `<br><strong>Số CCCD:</strong> ${citizenId}`;
-            
-            // Cập nhật part1 và thực hiện các hành động tiếp theo
+            // Kiểm tra nếu không tìm thấy CCCD
+            if (!citizenId) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Lỗi nhận diện!',
+                    text: 'Không tìm thấy số CCCD trong ảnh. Vui lòng thử lại.',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+
+            // Gán part1 và kiểm tra với danh sách user
             part1 = citizenId;
 
-            // Chờ đến khi part1 có giá trị và thực hiện các hành động tiếp theo
-            if (part1) {
-                loadSavedAnswers(part1);
-                
-                greetingElement.textContent = `Xin chào cử tri! Số CCCD của bạn là ${part1}`;
-                formContainer.style.display = "block";
-                showForm();
+            // Kiểm tra xem part1 có trong danh sách user không
+            var user = users.find(u => u.cccd === part1);
+
+            if (!user) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Không hợp lệ!',
+                    text: 'Hiện tại đợt khảo sát đã kết thúc hoặc cử tri không có trong danh sách lấy ý kiến!',
+                    confirmButtonText: 'OK'
+                });
+                return;
             }
+
+            // Nếu hợp lệ, hiển thị form khảo sát
+            document.getElementById("greeting").innerHTML = `
+                <strong>Xin chào ${user.ten}!</strong><br>
+                <strong>Số CCCD:</strong> ${user.cccd}<br>
+                <strong>Địa chỉ:</strong> ${user.diaChi}<br>
+                <strong>Ngày sinh:</strong> ${user.ngaySinh}
+            `;
+            formContainer.style.display = "block";
+            showForm();
+            loadSavedAnswers(part1);
+
         }).catch(err => {
             console.error("Lỗi trong quá trình nhận diện:", err);
+
+            // Đóng hiệu ứng loading nếu xảy ra lỗi
+            Swal.close();
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi xử lý ảnh!',
+                text: 'Có lỗi xảy ra khi quét CCCD, vui lòng thử lại.',
+                confirmButtonText: 'OK'
+            });
         });
     };
 });
 
 
-    manualInputButton.addEventListener("click", () => {
-        part1 = prompt("Nhập số CCCD (part1):");
-        part3 = prompt("Nhập thông tin khác (part3):");
+
+    // manualInputButton.addEventListener("click", () => {
+    //     part1 = prompt("Nhập số CCCD (part1):");
+    //     part3 = prompt("Nhập thông tin khác (part3):");
 
 
-        if(part1 != null){
-            loadSavedAnswers(part1);
-        }
+    //     if(part1 != null){
+    //         loadSavedAnswers(part1);
+    //     }
         
-        greetingElement.textContent = `Xin chào cử tri! Số CCCD của bạn là ${part1}`;
-        formContainer.style.display = "block";
-        showForm();
+    //     greetingElement.textContent = `Xin chào cử tri! Số CCCD của bạn là ${part1}`;
+    //     formContainer.style.display = "block";
+    //     showForm();
       
-    });
+    // });
 
     function hideForm() {
     document.getElementById("formContainer").style.display = "none";
@@ -311,7 +425,7 @@
     // Hiện lại các nút khi form đóng
     document.getElementById("startScan").style.display = "inline-block"; // Hoặc "block" tùy thuộc vào cách bạn muốn
     document.getElementById("uploadImage").style.display = "inline-block"; // Hoặc "block"
-    document.getElementById("manualInput").style.display = "inline-block"; // Hoặc "block"
+    
 
 }
 
@@ -322,7 +436,7 @@
     // Ẩn các nút khi form mở
     document.getElementById("startScan").style.display = "none";
     document.getElementById("uploadImage").style.display = "none";
-    document.getElementById("manualInput").style.display = "none";
+
 }
 
 
@@ -342,10 +456,8 @@
         const savedAnswers = {
             question1: sessionStorage.getItem("question1"),
             question2: sessionStorage.getItem("question2"),
-            question3: sessionStorage.getItem("question3"),
             otherOpinion1: sessionStorage.getItem("otherOpinion1"),
-            otherOpinion2: sessionStorage.getItem("otherOpinion2"),
-            otherOpinion3: sessionStorage.getItem("otherOpinion3")
+            otherOpinion2: sessionStorage.getItem("otherOpinion2")
         };
 
         if (savedAnswers.question1) {
@@ -389,16 +501,17 @@
 
 
 
-    form.addEventListener("submit", (event) => {
-        event.preventDefault();
+form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    
+    try {
         const formData = new FormData(form);
         const selectedAnswers = {
             question1: formData.get("question1"),
             question2: formData.get("question2"),
             question3: formData.get("question3"),
             otherOpinion1: formData.get("otherOpinion1"),
-            otherOpinion2: formData.get("otherOpinion2"),
-            otherOpinion3: formData.get("otherOpinion3")
+            otherOpinion2: formData.get("otherOpinion2")
         };
 
         // Lưu vào sessionStorage
@@ -407,10 +520,8 @@
         sessionStorage.setItem("question3", selectedAnswers.question3);
         sessionStorage.setItem("otherOpinion1", selectedAnswers.otherOpinion1);
         sessionStorage.setItem("otherOpinion2", selectedAnswers.otherOpinion2);
-        sessionStorage.setItem("otherOpinion3", selectedAnswers.otherOpinion3);
 
-                // Lưu vào sessionStorage
-                sessionStorage.setItem('part1', part1);
+        sessionStorage.setItem('part1', part1);
         sessionStorage.setItem('part3', part3);
 
         // Xóa các câu trả lời trong bảng
@@ -420,9 +531,29 @@
         formContainer.style.display = "none";
         hideForm();
 
-        // Hiển thị thông báo hoặc thực hiện hành động khác
+        // Hiển thị thông báo thành công
+        Swal.fire({
+            icon: 'success',
+            title: 'Gửi thành công!',
+            text: 'Cảm ơn bạn đã hoàn thành khảo sát.',
+            confirmButtonText: 'OK'
+        });
+
         console.log("Các câu trả lời đã được lưu:", selectedAnswers);
-    });
+        
+    } catch (error) {
+        console.error("Lỗi khi gửi khảo sát:", error);
+
+        // Hiển thị thông báo thất bại
+        Swal.fire({
+            icon: 'error',
+            title: 'Gửi thất bại!',
+            text: 'Đã xảy ra lỗi, vui lòng thử lại.',
+            confirmButtonText: 'OK'
+        });
+    }
+});
+
 </script>
 
 
