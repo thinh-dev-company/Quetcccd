@@ -395,6 +395,8 @@ fileInput.addEventListener("change", (event) => {
             formContainer.style.display = "block";
             showForm();
             loadSavedAnswers(part1);
+            fileInput.value = "";
+
 
         }).catch(err => {
             console.error("Lỗi trong quá trình nhận diện:", err);
@@ -450,6 +452,7 @@ fileInput.addEventListener("change", (event) => {
     // Ẩn các nút khi form mở
     document.getElementById("startScan").style.display = "none";
     document.getElementById("uploadImage").style.display = "none";
+    document.getElementById("stopScan").style.display = "none";
     document.getElementById("video").style.display = "none";
     document.getElementById("canvas").style.display = "none";
     document.getElementById("preview").style.display = "none";
