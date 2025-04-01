@@ -67,7 +67,7 @@
     <div class="banner"></div>
 
     <main>
-        <h2 id="introScan">Vui Lòng quét QR code trên CCCD để tiến hành lấy ý kiến cử tri</h2>
+        <h2 id="introScan">Vui Lòng quét QR code trên CCCD hoặc tải ảnh CCCD để tiến hành lấy ý kiến cử tri</h2>
         <button id="startScan">Bắt đầu quét</button>
         <button id="stopScan" style="display:none;">Dừng quét</button>
         <button id="uploadImage">Tải ảnh lên</button>
@@ -183,9 +183,9 @@
             "ngaySinh": "19/05/1991"
         },
         {
-            "cccd": "3333",
+            "cccd": "086079004309",
             "ten": "Trần Thành Bá",
-            "diaChi": "456 Đường XYZ, TP.Cần Thơ",
+            "diaChi": "An Phú,Ninh Kiều, TP.Cần Thơ",
             "ngaySinh": "16/04/1979"
         },
         {
@@ -231,7 +231,15 @@
 
     startButton.addEventListener("click", async () => {
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            const constraints = {
+                    video: {
+                        facingMode: "environment",
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    }
+                };
+
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
             videoElement.srcObject = stream;
             videoElement.style.display = "block";
             previewImage.style.display = "none";
@@ -254,6 +262,7 @@
                         sessionStorage.setItem('part3', part3);
                         if(part1 != null){
                             loadSavedAnswers(part1);
+                            stopScanning();
                         }
 
                         document.getElementById("greeting").innerHTML = `
@@ -262,6 +271,7 @@
                             <strong>Địa chỉ:</strong> ${user.diaChi}<br>
                             <strong>Ngày sinh:</strong> ${user.ngaySinh}
                             `;
+
                         formContainer.style.display = "block";
                         showForm();
                         
@@ -425,6 +435,10 @@ fileInput.addEventListener("change", (event) => {
     // Hiện lại các nút khi form đóng
     document.getElementById("startScan").style.display = "inline-block"; // Hoặc "block" tùy thuộc vào cách bạn muốn
     document.getElementById("uploadImage").style.display = "inline-block"; // Hoặc "block"
+    document.getElementById("introScan").style.display = "block"; 
+    document.getElementById("video").style.display = "none";
+    document.getElementById("canvas").style.display = "none";
+    document.getElementById("preview").style.display = "none";
     
 
 }
@@ -436,7 +450,10 @@ fileInput.addEventListener("change", (event) => {
     // Ẩn các nút khi form mở
     document.getElementById("startScan").style.display = "none";
     document.getElementById("uploadImage").style.display = "none";
-
+    document.getElementById("video").style.display = "none";
+    document.getElementById("canvas").style.display = "none";
+    document.getElementById("preview").style.display = "none";
+    document.getElementById("introScan").style.display = "none";
 }
 
 
