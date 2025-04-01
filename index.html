@@ -16,12 +16,46 @@
         button:hover { background: #005bb5; }
         video, img, canvas { width: 100%; max-width: 400px; display: none; margin-top: 10px; border: 2px solid #0073e6; }
         footer { background: #333; color: white; text-align: center; padding: 15px; margin-top: 20px; }
+.form-container {
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background-color: #f9f9f9;
+    width: 100%; /* Chiếm toàn bộ chiều ngang */
+    max-width: 100%; /* Không giới hạn chiều rộng */
+    display: block; /* Đảm bảo form là block để không bị inline */
+}
+
+.question {
+    margin: 20px 0;
+    text-align: left;
+    display: block; /* Hiển thị theo hàng dọc */
+}
+
+.question label {
+    font-size: 18px;
+    display: block; /* Đảm bảo label nằm trên input */
+    margin-bottom: 5px;
+}
+
+.question input {
+    margin-left: 0; /* Loại bỏ khoảng cách bên trái để căn thẳng */
+    margin-right: 10px;
+}
+#greeting {
+            text-align: left; /* Căn trái */
+            margin: 0; /* Xóa bỏ khoảng cách mặc định nếu có */
+        }
+
+        .textarea-container { display: none; margin-top: 10px; }
+        .textarea-container textarea { width: 100%; height: 100px; }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>Hệ thống Quét QR Code CCCD</h1>
+        <h1>Phiếu lấy ý kiến cử tri</h1>
     </header>
 
     <nav>
@@ -33,120 +67,366 @@
     <div class="banner"></div>
 
     <main>
-        <h2>Quét QR Code CCCD</h2>
+        <h2 id="introScan">Vui Lòng quét QR code trên CCCD để tiến hành lấy ý kiến cử tri</h2>
         <button id="startScan">Bắt đầu quét</button>
         <button id="stopScan" style="display:none;">Dừng quét</button>
         <button id="uploadImage">Tải ảnh lên</button>
+        <button id="manualInput" >Gán thủ công</button>
         <input type="file" id="fileInput" accept="image/*" style="display:none;">
         <video id="video"></video>
         <canvas id="canvas"></canvas>
         <img id="preview" alt="Ảnh tải lên">
-        <p>Kết quả: <span id="result"></span></p>
+        
+<div id="result"></div>
+
+        <!-- Form để nhập câu trả lời -->
+       <div class="form-container" style="display: none;" id="formContainer">
+    <h3 id="greeting"></h3>
+    <form id="formQuestions">
+        <div class="question">
+            <label for="question1">Thành lập (giải thể, nhập, chia, điều chỉnh địa giới) ĐVHC</label><br>
+            <label for="question1_yes">
+                <input type="radio" name="question1" value="Đồng ý" id="question1_yes" onclick="toggleOtherOpinion('question1', false)">Đồng ý
+            </label>
+            <label for="question1_no">
+                <input type="radio" name="question1" value="Không đồng ý" id="question1_no" onclick="toggleOtherOpinion('question1', false)">Không đồng ý
+            </label>
+            <label for="question1_other">
+                <input type="radio" name="question1" value="Ý kiến khác" id="question1_other" onclick="toggleOtherOpinion('question1', true)">Ý kiến khác
+            </label>
+            <div id="question1_otherOpinion" class="textarea-container">
+                <textarea name="otherOpinion1" placeholder="Nhập ý kiến khác của bạn"></textarea>
+            </div>
+        </div>
+        <div class="question">
+            <label for="question2">Thành lập (giải thể, nhập, chia, điều chỉnh địa giới) ĐVHC</label><br>
+            <label>
+                <input type="radio" name="question2" value="Đồng ý" id="question2_yes" onclick="toggleOtherOpinion('question2', false)">
+                Đồng ý
+            </label>
+            <label>
+                <input type="radio" name="question2" value="Không đồng ý" id="question2_no" onclick="toggleOtherOpinion('question2', false)">
+                Không đồng ý
+            </label>
+            <label>
+                <input type="radio" name="question2" value="Ý kiến khác" id="question2_other" onclick="toggleOtherOpinion('question2', true)">
+                Ý kiến khác
+            </label>
+            <div id="question2_otherOpinion" class="textarea-container">
+                <textarea name="otherOpinion2" placeholder="Nhập ý kiến khác của bạn"></textarea>
+            </div>
+        </div>
+        <div class="question" style="display: none;">
+            <label for="question3">Thành lập (giải thể, nhập, chia, điều chỉnh địa giới) ĐVHC</label><br>
+            <label>
+                <input type="radio" name="question3" value="Đồng ý" id="question3_yes" onclick="toggleOtherOpinion('question3', false)">
+                Đồng ý
+            </label>
+            <label>
+                <input type="radio" name="question3" value="Không đồng ý" id="question3_no" onclick="toggleOtherOpinion('question3', false)">
+                Không đồng ý
+            </label>
+            <label>
+                <input type="radio" name="question3" value="Ý kiến khác" id="question3_other" onclick="toggleOtherOpinion('question3', true)">
+                Ý kiến khác
+            </label>
+            <div id="question3_otherOpinion" class="textarea-container">
+                <textarea name="otherOpinion3" placeholder="Nhập ý kiến khác của bạn"></textarea>
+            </div>
+        </div>
+
+        <button type="submit">Gửi câu trả lời</button>
+        <button type="button" id="btnResetForm">Quay lại</button>
+    </form>
+</div>
+
     </main>
 
     <footer>
         <p>© 2025 - Hệ thống Quét QR CCCD</p>
     </footer>
+<script>
+    function toggleOtherOpinion(questionId, show) {
+        const textareaContainer = document.getElementById(`${questionId}_otherOpinion`);
+        const textarea = textareaContainer ? textareaContainer.querySelector('textarea') : null;
 
-    <script type="module">
-        import { BrowserMultiFormatReader } from "https://cdn.jsdelivr.net/npm/@zxing/browser@latest/+esm";
-
-        const codeReader = new BrowserMultiFormatReader();
-        const videoElement = document.getElementById("video");
-        const resultElement = document.getElementById("result");
-        const startButton = document.getElementById("startScan");
-        const stopButton = document.getElementById("stopScan");
-        const uploadButton = document.getElementById("uploadImage");
-        const fileInput = document.getElementById("fileInput");
-        const previewImage = document.getElementById("preview");
-        const canvas = document.getElementById("canvas");
-        const ctx = canvas.getContext("2d");
-        let stream = null;
-        
-        startButton.addEventListener("click", async () => {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                videoElement.srcObject = stream;
-                videoElement.style.display = "block";
-                previewImage.style.display = "none";
-                startButton.style.display = "none";
-                stopButton.style.display = "inline-block";
-                
-                await codeReader.decodeFromVideoDevice(undefined, "video", (result, err) => {
-                    if (result) {
-                        resultElement.textContent = result.text;
-                        stopScanning();
-                    }
-                }, { tryHarder: true });
-            } catch (error) {
-                alert("Không thể mở camera! Hãy kiểm tra quyền truy cập.");
-            }
-        });
-        
-        stopButton.addEventListener("click", stopScanning);
-        
-        function stopScanning() {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                videoElement.style.display = "none";
-                startButton.style.display = "inline-block";
-                stopButton.style.display = "none";
-            }
-            codeReader.reset();
-        }
-        
-        uploadButton.addEventListener("click", () => fileInput.click());
-        
-        fileInput.addEventListener("change", async (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = async (e) => {
-                    previewImage.src = e.target.result;
-                    previewImage.style.display = "block";
-                    videoElement.style.display = "none";
-                    
-                    const img = new Image();
-                    img.src = e.target.result;
-                    img.onload = async () => {
-                        try {
-                            processImage(img);
-                        } catch (err) {
-                            resultElement.textContent = "Không tìm thấy mã QR trong ảnh.";
-                        }
-                    };
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        function processImage(img) {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0, img.width, img.height);
-            
-            // Chuyển ảnh sang grayscale
-            let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            let data = imageData.data;
-            for (let i = 0; i < data.length; i += 4) {
-                let brightness = 0.3 * data[i] + 0.59 * data[i + 1] + 0.11 * data[i + 2];
-                data[i] = data[i + 1] = data[i + 2] = brightness > 128 ? 255 : 0;
-            }
-            ctx.putImageData(imageData, 0, 0);
-
-            // Quét mã QR từ ảnh đã xử lý
-            const processedImg = new Image();
-            processedImg.src = canvas.toDataURL();
-            processedImg.onload = async () => {
-                try {
-                    const result = await codeReader.decodeFromImageElement(processedImg);
-                    resultElement.textContent = result.text;
-                } catch (err) {
-                    resultElement.textContent = "Không tìm thấy mã QR sau khi xử lý ảnh.";
+        if (textareaContainer) {
+            if (show) {
+                // Hiển thị textarea
+                textareaContainer.style.display = "block";
+            } else {
+                // Ẩn textarea và làm rỗng nội dung
+                textareaContainer.style.display = "none";
+                if (textarea) {
+                    textarea.value = ""; // Làm rỗng nội dung
                 }
-            };
+            }
         }
-    </script>
+    }
+
+
+
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.0.2/tesseract.min.js"></script>
+
+<script type="module">
+    import { BrowserMultiFormatReader } from "https://cdn.jsdelivr.net/npm/@zxing/browser@latest/+esm";
+
+    const codeReader = new BrowserMultiFormatReader();
+    const videoElement = document.getElementById("video");
+    const resultElement = document.getElementById("result");
+    const startButton = document.getElementById("startScan");
+    const stopButton = document.getElementById("stopScan");
+    const uploadButton = document.getElementById("uploadImage");
+    const manualInputButton = document.getElementById("manualInput");
+    const fileInput = document.getElementById("fileInput");
+    const previewImage = document.getElementById("preview");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const formContainer = document.getElementById("formContainer");
+    const greetingElement = document.getElementById("greeting");
+    const form = document.getElementById("formQuestions");
+
+    let part1 = "";
+    let part3 = "";
+
+    let stream = null;
+
+    startButton.addEventListener("click", async () => {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            videoElement.srcObject = stream;
+            videoElement.style.display = "block";
+            previewImage.style.display = "none";
+            startButton.style.display = "none";
+            stopButton.style.display = "inline-block";
+
+            await codeReader.decodeFromVideoDevice(undefined, "video", (result, err) => {
+                if (result) {
+                    const qrData = result.text.split('|');
+                    part1 = qrData[0]; // phần đầu tiên
+                    part3 = qrData[2]; // phần cuối cùng
+
+                    // Lưu vào sessionStorage
+                    sessionStorage.setItem('part1', part1);
+                    sessionStorage.setItem('part3', part3);
+
+                    
+                    greetingElement.textContent = `Xin chào ${part3}, Số CCCD của bạn là ${part1}`;
+                    formContainer.style.display = "block";
+                    showForm();
+                }
+                if(part1 != null){
+            loadSavedAnswers(part1);
+        }
+            });
+        } catch (err) {
+            console.error(err);
+            alert("Lỗi khi truy cập camera.");
+        }
+    });
+
+    stopButton.addEventListener("click", () => {
+        stopScanning();
+    });
+
+    uploadButton.addEventListener("click", () => {
+        fileInput.click();
+    });
+
+    fileInput.addEventListener("change", (event) => {
+    const fileInput = document.getElementById("fileInput");
+    if (fileInput.files.length === 0) {
+        alert("Vui lòng chọn một tệp ảnh để quét!");
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    
+    reader.onload = function() {
+        Tesseract.recognize(
+            reader.result,
+            'vie', // Ngôn ngữ tiếng Việt
+            {
+                logger: info => console.log(info) // Log tiến trình
+            }
+        ).then(({ data: { text } }) => {
+            console.log("Kết quả OCR:", text);
+
+            // Hàm tìm kiếm số CCCD dựa vào chuỗi số liên tục
+            function extractCitizenId(text) {
+                const idRegex = /\b\d{12}\b/; // Tìm kiếm chuỗi 12 chữ số
+                const match = text.match(idRegex);
+                return match ? match[0] : "Không tìm thấy số CCCD";
+            }
+
+            // Trích xuất thông tin
+            const citizenId = extractCitizenId(text);
+
+            // Hiển thị kết quả
+            console.log("Số CCCD:", citizenId);
+
+            // Hiển thị thông tin đã trích xuất
+            document.getElementById("result").innerHTML += `<br><strong>Số CCCD:</strong> ${citizenId}`;
+            
+            // Cập nhật part1 và thực hiện các hành động tiếp theo
+            part1 = citizenId;
+
+            // Chờ đến khi part1 có giá trị và thực hiện các hành động tiếp theo
+            if (part1) {
+                loadSavedAnswers(part1);
+                
+                greetingElement.textContent = `Xin chào cử tri! Số CCCD của bạn là ${part1}`;
+                formContainer.style.display = "block";
+                showForm();
+            }
+        }).catch(err => {
+            console.error("Lỗi trong quá trình nhận diện:", err);
+        });
+    };
+});
+
+
+    manualInputButton.addEventListener("click", () => {
+        part1 = prompt("Nhập số CCCD (part1):");
+        part3 = prompt("Nhập thông tin khác (part3):");
+
+
+        if(part1 != null){
+            loadSavedAnswers(part1);
+        }
+        
+        greetingElement.textContent = `Xin chào cử tri! Số CCCD của bạn là ${part1}`;
+        formContainer.style.display = "block";
+        showForm();
+      
+    });
+
+    function hideForm() {
+    document.getElementById("formContainer").style.display = "none";
+
+    // Hiện lại các nút khi form đóng
+    document.getElementById("startScan").style.display = "inline-block"; // Hoặc "block" tùy thuộc vào cách bạn muốn
+    document.getElementById("uploadImage").style.display = "inline-block"; // Hoặc "block"
+    document.getElementById("manualInput").style.display = "inline-block"; // Hoặc "block"
+
+}
+
+
+    function showForm() {
+    document.getElementById("formContainer").style.display = "block";
+
+    // Ẩn các nút khi form mở
+    document.getElementById("startScan").style.display = "none";
+    document.getElementById("uploadImage").style.display = "none";
+    document.getElementById("manualInput").style.display = "none";
+}
+
+
+    function stopScanning() {
+        if (stream) {
+            const tracks = stream.getTracks();
+            tracks.forEach(track => track.stop());
+        }
+        videoElement.style.display = "none";
+        stopButton.style.display = "none";
+        startButton.style.display = "inline-block";
+    }
+
+   function loadSavedAnswers(part1) {
+    var partcheck = sessionStorage.getItem("part1"); // Sửa lỗi gán biến
+    if(partcheck == part1){
+        const savedAnswers = {
+            question1: sessionStorage.getItem("question1"),
+            question2: sessionStorage.getItem("question2"),
+            question3: sessionStorage.getItem("question3"),
+            otherOpinion1: sessionStorage.getItem("otherOpinion1"),
+            otherOpinion2: sessionStorage.getItem("otherOpinion2"),
+            otherOpinion3: sessionStorage.getItem("otherOpinion3")
+        };
+
+        if (savedAnswers.question1) {
+            document.querySelector(`input[name="question1"][value="${savedAnswers.question1}"]`).checked = true;
+            toggleOtherOpinion('question1', savedAnswers.question1 === "Ý kiến khác");
+            if (savedAnswers.otherOpinion1) {
+                document.querySelector("textarea[name='otherOpinion1']").value = savedAnswers.otherOpinion1;
+            }
+        }
+
+        if (savedAnswers.question2) {
+            document.querySelector(`input[name="question2"][value="${savedAnswers.question2}"]`).checked = true;
+            toggleOtherOpinion('question2', savedAnswers.question2 === "Ý kiến khác");
+            if (savedAnswers.otherOpinion2) {
+                document.querySelector("textarea[name='otherOpinion2']").value = savedAnswers.otherOpinion2;
+            }
+        }
+
+        if (savedAnswers.question3) {
+            document.querySelector(`input[name="question3"][value="${savedAnswers.question3}"]`).checked = true;
+            toggleOtherOpinion('question3', savedAnswers.question3 === "Ý kiến khác");
+            if (savedAnswers.otherOpinion3) {
+                document.querySelector("textarea[name='otherOpinion3']").value = savedAnswers.otherOpinion3;
+            }
+        }
+    }
+       
+    }
+
+ 
+    document.getElementById("btnResetForm").addEventListener("click", function() {
+    // Lấy form và reset
+    let form = document.querySelector("form");
+    if (form) {
+        form.reset();
+    }
+
+    formContainer.style.display = "none";
+    hideForm();
+});
+
+
+
+    form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const formData = new FormData(form);
+        const selectedAnswers = {
+            question1: formData.get("question1"),
+            question2: formData.get("question2"),
+            question3: formData.get("question3"),
+            otherOpinion1: formData.get("otherOpinion1"),
+            otherOpinion2: formData.get("otherOpinion2"),
+            otherOpinion3: formData.get("otherOpinion3")
+        };
+
+        // Lưu vào sessionStorage
+        sessionStorage.setItem("question1", selectedAnswers.question1);
+        sessionStorage.setItem("question2", selectedAnswers.question2);
+        sessionStorage.setItem("question3", selectedAnswers.question3);
+        sessionStorage.setItem("otherOpinion1", selectedAnswers.otherOpinion1);
+        sessionStorage.setItem("otherOpinion2", selectedAnswers.otherOpinion2);
+        sessionStorage.setItem("otherOpinion3", selectedAnswers.otherOpinion3);
+
+                // Lưu vào sessionStorage
+                sessionStorage.setItem('part1', part1);
+        sessionStorage.setItem('part3', part3);
+
+        // Xóa các câu trả lời trong bảng
+        form.reset(); // Reset form về trạng thái ban đầu
+
+        // Đóng form và ẩn nó
+        formContainer.style.display = "none";
+        hideForm();
+
+        // Hiển thị thông báo hoặc thực hiện hành động khác
+        console.log("Các câu trả lời đã được lưu:", selectedAnswers);
+    });
+</script>
+
+
+
 
 </body>
 </html>
