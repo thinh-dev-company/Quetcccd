@@ -523,25 +523,32 @@ fileInput.addEventListener("change", (event) => {
 
 form.addEventListener("submit", (event) => {
     event.preventDefault();
-    
+
     try {
         const formData = new FormData(form);
         const selectedAnswers = {
             question1: formData.get("question1"),
             question2: formData.get("question2"),
-            otherOpinion1: formData.get("otherOpinion1"),
-            otherOpinion2: formData.get("otherOpinion2")
+            otherOpinion1: formData.get("otherOpinion1") || "",
+            otherOpinion2: formData.get("otherOpinion2") || ""
         };
+
+        // Kiểm tra nếu chưa chọn đầy đủ 2 câu hỏi
+        if (!selectedAnswers.question1 || !selectedAnswers.question2) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Thiếu câu trả lời!',
+                text: 'Vui lòng chọn đáp án cho tất cả câu hỏi.',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
 
         // Lưu vào sessionStorage
         sessionStorage.setItem("question1", selectedAnswers.question1);
         sessionStorage.setItem("question2", selectedAnswers.question2);
-        sessionStorage.setItem("question3", selectedAnswers.question3);
         sessionStorage.setItem("otherOpinion1", selectedAnswers.otherOpinion1);
         sessionStorage.setItem("otherOpinion2", selectedAnswers.otherOpinion2);
-
-        sessionStorage.setItem('part1', part1);
-        sessionStorage.setItem('part3', part3);
 
         // Xóa các câu trả lời trong bảng
         form.reset(); // Reset form về trạng thái ban đầu
@@ -559,7 +566,7 @@ form.addEventListener("submit", (event) => {
         });
 
         console.log("Các câu trả lời đã được lưu:", selectedAnswers);
-        
+
     } catch (error) {
         console.error("Lỗi khi gửi khảo sát:", error);
 
@@ -572,6 +579,7 @@ form.addEventListener("submit", (event) => {
         });
     }
 });
+
 
 </script>
 
