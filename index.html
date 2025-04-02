@@ -60,6 +60,7 @@
 
         let stream = null;
         let isScanning = false;
+        let foundCCCD = "", foundHoTen = "", foundNgaySinh = "";
 
         async function startCamera() {
             try {
@@ -126,11 +127,20 @@
                 const hoTen = extractHoTen(text);
                 const ngaySinh = extractNgaySinh(text);
 
-                if (cccd) cccdElement.innerText = cccd;
-                if (hoTen) hoTenElement.innerText = hoTen;
-                if (ngaySinh) ngaySinhElement.innerText = ngaySinh;
+                if (cccd && !foundCCCD) {
+                    foundCCCD = cccd;
+                    cccdElement.innerText = cccd;
+                }
+                if (hoTen && !foundHoTen) {
+                    foundHoTen = hoTen;
+                    hoTenElement.innerText = hoTen;
+                }
+                if (ngaySinh && !foundNgaySinh) {
+                    foundNgaySinh = ngaySinh;
+                    ngaySinhElement.innerText = ngaySinh;
+                }
 
-                if (cccd && hoTen && ngaySinh) {
+                if (foundCCCD && foundHoTen && foundNgaySinh) {
                     stopCamera();
                 } else {
                     setTimeout(scanOCR, 2000);
