@@ -4,38 +4,95 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live OCR Scanner</title>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.0.2/tesseract.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        video {
+            width: 90%;
+            max-width: 500px;
+            border: 2px solid blue;
+            margin-top: 10px;
+        }
+        .result-box {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            max-height: 200px;
+            overflow-y: auto; /* Cuộn xuống nếu có nhiều dữ liệu */
+            text-align: left;
+            background: #f9f9f9;
+        }
+    </style>
 </head>
 <body>
 
-    <video id="video" autoplay></video>
-    <button onclick="captureFrame()">Chụp ảnh & Quét</button>
-    <canvas id="canvas" style="display:none;"></canvas>
-    <p>Kết quả: <span id="result"></span></p>
+    <h2>Live OCR Scanner (Ưu tiên camera sau)</h2>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas" style="display: none;"></canvas>
+    <p id="error-message" style="color: red;"></p>
+
+    <h3>Kết quả OCR:</h3>
+    <div class="result-box" id="result"></div>
 
     <script>
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+        const video = document.getElementById("video");
+        const canvas = document.getElementById("canvas");
+        const resultBox = document.getElementById("result");
+        const errorMessage = document.getElementById("error-message");
 
-        // Mở camera
-        navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-            video.srcObject = stream;
-        });
+        async function startCamera() {
+            try {
+                const constraints = {
+                    video: { facingMode: { exact: "environment" } } // Ưu tiên camera sau
+                };
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+                setTimeout(scanOCR, 2000); // Quét sau 2 giây
+            } catch (error) {
+                console.error("Lỗi truy cập camera:", error);
+                errorMessage.innerText = "Không thể mở camera sau. Đang thử camera trước...";
+                
+                try {
+                    const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    video.srcObject = fallbackStream;
+                    setTimeout(scanOCR, 2000);
+                } catch (fallbackError) {
+                    errorMessage.innerText = "Không thể mở bất kỳ camera nào!";
+                }
+            }
+        }
 
-        function captureFrame() {
-            // Chụp ảnh từ video
+        function scanOCR() {
+            if (!video.srcObject) return;
+
+            const ctx = canvas.getContext("2d");
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            // Chuyển đổi ảnh thành OCR
-            Tesseract.recognize(canvas.toDataURL(), 'eng', {
-                logger: m => console.log(m)
-            }).then(({ data: { text } }) => {
-                document.getElementById('result').innerText = text;
+            Tesseract.recognize(
+                canvas,
+                'eng+vie', // Hỗ trợ Tiếng Anh & Tiếng Việt
+                {
+                    logger: m => console.log(m) // Log tiến trình OCR
+                }
+            ).then(({ data: { text } }) => {
+                if (text.trim()) {
+                    resultBox.innerHTML = `<p>${text}</p>`;
+                }
+                setTimeout(scanOCR, 2000); // Quét lại sau 2 giây
+            }).catch(err => {
+                console.error("Lỗi OCR:", err);
+                resultBox.innerHTML = "<p style='color: red;'>Không nhận diện được văn bản!</p>";
+                setTimeout(scanOCR, 2000);
             });
         }
+
+        startCamera();
     </script>
 
 </body>
