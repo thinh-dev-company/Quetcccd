@@ -42,16 +42,11 @@
     <canvas id="canvas" class="hidden"></canvas>
     <p id="error-message" style="color: red;"></p>
 
-    <h3>Kết quả 1 (Đã lọc):</h3>
+    <h3>Kết quả Nhận Diện:</h3>
     <div class="result-box">
         <p><strong>CCCD:</strong> <span id="cccd">...</span></p>
         <p><strong>Họ Tên:</strong> <span id="hoTen">...</span></p>
         <p><strong>Ngày Sinh:</strong> <span id="ngaySinh">...</span></p>
-    </div>
-
-    <h3>Kết quả 2 (OCR Gốc):</h3>
-    <div class="result-box">
-        <p id="rawOCR">Chưa có dữ liệu...</p>
     </div>
 
     <script>
@@ -62,11 +57,9 @@
         const cccdElement = document.getElementById("cccd");
         const hoTenElement = document.getElementById("hoTen");
         const ngaySinhElement = document.getElementById("ngaySinh");
-        const rawOCRElement = document.getElementById("rawOCR");
 
         let stream = null;
         let isScanning = false;
-        let foundCCCD = "", foundHoTen = "", foundNgaySinh = "";
 
         async function startCamera() {
             try {
@@ -129,26 +122,15 @@
                 'eng+vie',
                 { logger: m => console.log(m) }
             ).then(({ data: { text } }) => {
-                rawOCRElement.innerText = text; // Hiển thị kết quả OCR gốc
-
                 const cccd = extractCCCD(text);
                 const hoTen = extractHoTen(text);
                 const ngaySinh = extractNgaySinh(text);
 
-                if (cccd && !foundCCCD) {
-                    foundCCCD = cccd;
-                    cccdElement.innerText = cccd;
-                }
-                if (hoTen && !foundHoTen) {
-                    foundHoTen = hoTen;
-                    hoTenElement.innerText = hoTen;
-                }
-                if (ngaySinh && !foundNgaySinh) {
-                    foundNgaySinh = ngaySinh;
-                    ngaySinhElement.innerText = ngaySinh;
-                }
+                if (cccd) cccdElement.innerText = cccd;
+                if (hoTen) hoTenElement.innerText = hoTen;
+                if (ngaySinh) ngaySinhElement.innerText = ngaySinh;
 
-                if (foundCCCD && foundHoTen && foundNgaySinh) {
+                if (cccd && hoTen && ngaySinh) {
                     stopCamera();
                 } else {
                     setTimeout(scanOCR, 2000);
