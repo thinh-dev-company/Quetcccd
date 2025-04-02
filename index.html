@@ -308,7 +308,8 @@
         fileInput.click();
     });
 
-    fileInput.addEventListener("change", (event) => {
+// Lắng nghe sự kiện thay đổi file
+fileInput.addEventListener("change", (event) => {
     const fileInput = document.getElementById("fileInput");
     if (fileInput.files.length === 0) {
         Swal.fire({
@@ -324,116 +325,96 @@
     const reader = new FileReader();
     reader.readAsDataURL(file);
 
+    // Hiển thị hiệu ứng loading khi bắt đầu quét
+    Swal.fire({
+        title: 'Đang quét ảnh...',
+        text: 'Vui lòng chờ trong giây lát!',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
     reader.onload = function () {
-        const img = new Image();
-        img.src = reader.result;
-        img.onload = function () {
-            // Tạo một canvas để resize ảnh
-            const canvas = document.createElement("canvas");
-            const ctx = canvas.getContext("2d");
-
-            // Giữ tỷ lệ ảnh, resize về chiều rộng tối đa 1024px
-            let maxWidth = 1024;
-            let scale = maxWidth / img.width;
-            let newWidth = img.width * scale;
-            let newHeight = img.height * scale;
-
-            canvas.width = newWidth;
-            canvas.height = newHeight;
-
-            // Chuyển ảnh thành grayscale
-            ctx.drawImage(img, 0, 0, newWidth, newHeight);
-            let imageData = ctx.getImageData(0, 0, newWidth, newHeight);
-            let data = imageData.data;
-            for (let i = 0; i < data.length; i += 4) {
-                let avg = (data[i] + data[i + 1] + data[i + 2]) / 3; // Chuyển thành grayscale
-                data[i] = avg;
-                data[i + 1] = avg;
-                data[i + 2] = avg;
+        Tesseract.recognize(
+            reader.result,
+            'vie', // Ngôn ngữ tiếng Việt
+            {
+                logger: info => console.log(info) // Log tiến trình
             }
-            ctx.putImageData(imageData, 0, 0);
+        ).then(({ data: { text } }) => {
+            console.log("Kết quả OCR:", text);
 
-            // Hiển thị loading khi quét ảnh
-            Swal.fire({
-                title: 'Đang quét ảnh...',
-                text: 'Vui lòng chờ trong giây lát!',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
+            // Hàm tìm kiếm số CCCD dựa vào chuỗi số liên tục
+            function extractCitizenId(text) {
+                const idRegex = /\b\d{12}\b/; // Tìm kiếm chuỗi 12 chữ số
+                const match = text.match(idRegex);
+                return match ? match[0] : null;
+            }
 
-            // Gửi ảnh đã resize cho OCR
-            Tesseract.recognize(
-                canvas.toDataURL(), // Ảnh đã được tối ưu
-                'vie', // Ngôn ngữ tiếng Việt
-                {
-                    logger: info => console.log(info) // Log tiến trình
-                }
-            ).then(({ data: { text } }) => {
-                console.log("Kết quả OCR:", text);
+            // Trích xuất số CCCD
+            const citizenId = extractCitizenId(text);
 
-                // Hàm tìm kiếm số CCCD dựa vào chuỗi số liên tục
-                function extractCitizenId(text) {
-                    const idRegex = /\b\d{12}\b/; // Tìm kiếm chuỗi 12 chữ số
-                    const match = text.match(idRegex);
-                    return match ? match[0] : null;
-                }
+            // Đóng hiệu ứng loading
+            Swal.close();
 
-                // Trích xuất số CCCD
-                const citizenId = extractCitizenId(text);
-
-                // Đóng hiệu ứng loading
-                Swal.close();
-
-                if (!citizenId) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Lỗi nhận diện!',
-                        text: 'Không tìm thấy số CCCD trong ảnh. Vui lòng thử lại.',
-                        confirmButtonText: 'OK'
-                    });
-                    return;
-                }
-
-                // Gán part1 và kiểm tra với danh sách user
-                part1 = citizenId;
-                var user = users.find(u => u.cccd === part1);
-
-                if (!user) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Không hợp lệ!',
-                        text: 'Hiện tại đợt khảo sát đã kết thúc hoặc cử tri không có trong danh sách lấy ý kiến!',
-                        confirmButtonText: 'OK'
-                    });
-                    return;
-                }
-
-                // Nếu hợp lệ, hiển thị form khảo sát
-                document.getElementById("greeting").innerHTML = `
-                    <strong>Xin chào ${user.ten}!</strong><br>
-                    <strong>Số CCCD:</strong> ${user.cccd}<br>
-                    <strong>Địa chỉ:</strong> ${user.diaChi}<br>
-                    <strong>Ngày sinh:</strong> ${user.ngaySinh}
-                `;
-                formContainer.style.display = "block";
-                showForm();
-                loadSavedAnswers(part1);
-                fileInput.value = "";
-            }).catch(err => {
-                console.error("Lỗi trong quá trình nhận diện:", err);
-                Swal.close();
+            // Kiểm tra nếu không tìm thấy CCCD
+            if (!citizenId) {
                 Swal.fire({
                     icon: 'error',
-                    title: 'Lỗi xử lý ảnh!',
-                    text: 'Có lỗi xảy ra khi quét CCCD, vui lòng thử lại.',
+                    title: 'Lỗi nhận diện!',
+                    text: 'Không tìm thấy số CCCD trong ảnh. Vui lòng thử lại.',
                     confirmButtonText: 'OK'
                 });
+                fileInput.value = "";
+                return;
+            }
+
+            // Gán part1 và kiểm tra với danh sách user
+            part1 = citizenId;
+
+            // Kiểm tra xem part1 có trong danh sách user không
+            var user = users.find(u => u.cccd === part1);
+
+            if (!user) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Không hợp lệ!',
+                    text: 'Hiện tại đợt khảo sát đã kết thúc hoặc cử tri không có trong danh sách lấy ý kiến!',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+
+            // Nếu hợp lệ, hiển thị form khảo sát
+            document.getElementById("greeting").innerHTML = `
+                <strong>Xin chào ${user.ten}!</strong><br>
+                <strong>Số CCCD:</strong> ${user.cccd}<br>
+                <strong>Địa chỉ:</strong> ${user.diaChi}<br>
+                <strong>Ngày sinh:</strong> ${user.ngaySinh}
+            `;
+            formContainer.style.display = "block";
+            showForm();
+            loadSavedAnswers(part1);
+            fileInput.value = "";
+
+
+        }).catch(err => {
+            console.error("Lỗi trong quá trình nhận diện:", err);
+
+            // Đóng hiệu ứng loading nếu xảy ra lỗi
+            Swal.close();
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi xử lý ảnh!',
+                text: 'Có lỗi xảy ra khi quét CCCD, vui lòng thử lại.',
+                confirmButtonText: 'OK'
             });
-        };
+        });
     };
 });
+
 
 
     // manualInputButton.addEventListener("click", () => {
