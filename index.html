@@ -1,106 +1,99 @@
-// Lắng nghe sự kiện thay đổi file
-fileInput.addEventListener("change", (event) => {
-    const fileInput = document.getElementById("fileInput");
-    if (fileInput.files.length === 0) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Chưa chọn tệp!',
-            text: 'Vui lòng chọn một tệp ảnh để quét.',
-            confirmButtonText: 'OK'
-        });
-        return;
-    }
-
-    const file = fileInput.files[0];
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-
-    // Hiển thị hiệu ứng loading khi bắt đầu quét
-    Swal.fire({
-        title: 'Đang quét ảnh...',
-        text: 'Vui lòng chờ trong giây lát!',
-        allowOutsideClick: false,
-        didOpen: () => {
-            Swal.showLoading();
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live OCR Scanner</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.0.2/tesseract.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
         }
-    });
+        video {
+            width: 90%;
+            max-width: 500px;
+            border: 2px solid blue;
+            margin-top: 10px;
+        }
+        .result-box {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            max-height: 200px;
+            overflow-y: auto; /* Cuộn xuống nếu có nhiều dữ liệu */
+            text-align: left;
+            background: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
 
-    reader.onload = function () {
-        Tesseract.recognize(
-            reader.result,
-            'vie', // Ngôn ngữ tiếng Việt
-            {
-                logger: info => console.log(info) // Log tiến trình
+    <h2>Live OCR Scanner (Ưu tiên camera sau)</h2>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas" style="display: none;"></canvas>
+    <p id="error-message" style="color: red;"></p>
+
+    <h3>Kết quả OCR:</h3>
+    <div class="result-box" id="result"></div>
+
+    <script>
+        const video = document.getElementById("video");
+        const canvas = document.getElementById("canvas");
+        const resultBox = document.getElementById("result");
+        const errorMessage = document.getElementById("error-message");
+
+        async function startCamera() {
+            try {
+                const constraints = {
+                    video: { facingMode: { exact: "environment" } } // Ưu tiên camera sau
+                };
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+                setTimeout(scanOCR, 2000); // Quét sau 2 giây
+            } catch (error) {
+                console.error("Lỗi truy cập camera:", error);
+                errorMessage.innerText = "Không thể mở camera sau. Đang thử camera trước...";
+                
+                try {
+                    const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    video.srcObject = fallbackStream;
+                    setTimeout(scanOCR, 2000);
+                } catch (fallbackError) {
+                    errorMessage.innerText = "Không thể mở bất kỳ camera nào!";
+                }
             }
-        ).then(({ data: { text } }) => {
-            console.log("Kết quả OCR:", text);
+        }
 
-            // Hàm tìm kiếm số CCCD dựa vào chuỗi số liên tục
-            function extractCitizenId(text) {
-                const idRegex = /\b\d{12}\b/; // Tìm kiếm chuỗi 12 chữ số
-                const match = text.match(idRegex);
-                return match ? match[0] : null;
-            }
+        function scanOCR() {
+            if (!video.srcObject) return;
 
-            // Trích xuất số CCCD
-            const citizenId = extractCitizenId(text);
-
-            // Đóng hiệu ứng loading
-            Swal.close();
-
-            // Kiểm tra nếu không tìm thấy CCCD
-            if (!citizenId) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Lỗi nhận diện!',
-                    text: 'Không tìm thấy số CCCD trong ảnh. Vui lòng thử lại.',
-                    confirmButtonText: 'OK'
-                });
-                fileInput.value = "";
-                return;
-            }
-
-            // Gán part1 và kiểm tra với danh sách user
-            part1 = citizenId;
-
-            // Kiểm tra xem part1 có trong danh sách user không
-            var user = users.find(u => u.cccd === part1);
-
-            if (!user) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Không hợp lệ!',
-                    text: 'Hiện tại đợt khảo sát đã kết thúc hoặc cử tri không có trong danh sách lấy ý kiến!',
-                    confirmButtonText: 'OK'
-                });
-                return;
-            }
-
-            // Nếu hợp lệ, hiển thị form khảo sát
-            document.getElementById("greeting").innerHTML = `
-                        <strong>Xin chào ${user.ten}!</strong><br>
-                        <strong>Số CCCD:</strong> ${user.cccd}<br>
-                        <strong>Địa chỉ:</strong> ${user.diaChi}<br>
-                        <strong>Ngày sinh:</strong> ${user.ngaySinh}
-                    `;
-            formContainer.style.display = "block";
-            showForm();
-            loadSavedAnswers(part1);
-            fileInput.value = "";
-
-
-        }).catch(err => {
-            console.error("Lỗi trong quá trình nhận diện:", err);
-
-            // Đóng hiệu ứng loading nếu xảy ra lỗi
-            Swal.close();
-
-            Swal.fire({
-                icon: 'error',
-                title: 'Lỗi xử lý ảnh!',
-                text: 'Có lỗi xảy ra khi quét CCCD, vui lòng thử lại.',
-                confirmButtonText: 'OK'
+            const ctx = canvas.getContext("2d");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            Tesseract.recognize(
+                canvas,
+                'eng+vie', // Hỗ trợ Tiếng Anh & Tiếng Việt
+                {
+                    logger: m => console.log(m) // Log tiến trình OCR
+                }
+            ).then(({ data: { text } }) => {
+                if (text.trim()) {
+                    resultBox.innerHTML = <p>${text}</p>;
+                }
+                setTimeout(scanOCR, 2000); // Quét lại sau 2 giây
+            }).catch(err => {
+                console.error("Lỗi OCR:", err);
+                resultBox.innerHTML = "<p style='color: red;'>Không nhận diện được văn bản!</p>";
+                setTimeout(scanOCR, 2000);
             });
-        });
-    };
-});
+        }
+
+        startCamera();
+    </script>
+
+</body>
+</html>
